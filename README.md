@@ -159,10 +159,6 @@ The scheduler (every `TICKER_SECONDS=120`) will:
 - On success → mark `sent`, set `sent_at` & `remote_message_id`
 - On failure → mark `failed`, store `last_error`
 
-**Verify in DB:**
-```bash
-docker compose exec -T postgres psql -U postgres -d insider   -c "SELECT id, to, status, sent_at, remote_message_id, last_error FROM messages ORDER BY id DESC LIMIT 10;"
-```
 ---
 
 ## 🧯 Troubleshooting
