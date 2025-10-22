@@ -1,0 +1,168 @@
+openapi: 3.0.3
+info:
+  title: Insider Message Scheduler API
+  version: "1.0.0"
+  description: |
+    HTTP API for controlling the background scheduler and sending messages manually.
+
+    **Notes**
+    - `POST /api/start` and `POST /api/stop` toggle the in-process scheduler.
+    - `POST /api/sent-messages` now allows manually sending a message immediately.
+
+servers:
+  - url: http://localhost:{port}
+    description: Local server
+    variables:
+      port:
+        default: "8080"
+
+tags:
+  - name: Control
+    description: Start/stop the background sender
+  - name: Messages
+    description: Send messages manually through API
+
+paths:
+  /api/start:
+    post:
+      tags: [Control]
+      summary: Start the scheduler
+      operationId: startScheduler
+      responses:
+        "200":
+          description: Scheduler started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StartStopStatus"
+              examples:
+                started:
+                  value: { status: "started" }
+        "500":
+          description: Failed to start
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/stop:
+    post:
+      tags: [Control]
+      summary: Stop the scheduler
+      operationId: stopScheduler
+      responses:
+        "200":
+          description: Scheduler stopped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StartStopStatus"
+              examples:
+                stopped:
+                  value: { status: "stopped" }
+        "500":
+          description: Failed to stop
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/sent-messages:
+    post:
+      tags: [Messages]
+      summary: Send a message manually
+      operationId: sendMessage
+      description: |
+        Sends a single message immediately to the configured webhook.
+        The message will also be persisted and tracked by the system.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookRequest"
+            examples:
+              exampleMessage:
+                summary: Example message body
+                value:
+                  to: "+905553333333"
+                  content: "Insider - Project D"
+      responses:
+        "202":
+          description: Message accepted and sent to webhook
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+              examples:
+                accepted:
+                  value:
+                    message: "Accepted"
+                    messageId: "0732d23b-c629-4aca-b94f-ca6e9abb6cfd"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                badRequest:
+                  value:
+                    error: "Missing 'to' or 'content' field"
+        "500":
+          description: Internal error during send
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                serverError:
+                  value:
+                    error: "webhook connection timeout"
+
+components:
+  schemas:
+    StartStopStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [started, stopped]
+      required: [status]
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "database timeout"
+      required: [error]
+
+    WebhookRequest:
+      type: object
+      required:
+        - to
+        - content
+      properties:
+        to:
+          type: string
+          example: "+905553333333"
+          description: Recipient phone number or identifier
+        content:
+          type: string
+          example: "Insider - Project D"
+          description: Message content to send
+      description: Request body for sending a message
+
+    WebhookResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Accepted"
+        messageId:
+          type: string
+          format: uuid
+          example: "0732d23b-c629-4aca-b94f-ca6e9abb6cfd"
+      required: [message, messageId]
+      description: Response from the webhook acknowledging message receipt
